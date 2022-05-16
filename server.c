@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include <limits.h>
 #include "http.h"
 
 
@@ -95,6 +94,7 @@ void check_args(int argc, char *argv[]) {
 	}
 	
 	// check root path
+	
 	/*
 	char curr_path[PATH_MAX];
 	if (getcwd(curr_path, sizeof(curr_path)) == NULL) {
@@ -102,10 +102,11 @@ void check_args(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	char *full_path = strcat(curr_path, argv[3]);
+	printf("%s\n", full_path);
 	*/
-
-	struct stat statbuf;
-	if (stat(argv[3], &statbuf) != 0 || !S_ISDIR(statbuf.st_mode)) {
+	
+	struct stat stat_buf;
+	if (stat(argv[3], &stat_buf) != 0 || !S_ISDIR(stat_buf.st_mode)) {
 		printf("invalid root path\n");
 		exit(EXIT_FAILURE);
 	}
