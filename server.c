@@ -95,14 +95,17 @@ void check_args(int argc, char *argv[]) {
 	}
 	
 	// check root path
+	/*
 	char curr_path[PATH_MAX];
 	if (getcwd(curr_path, sizeof(curr_path)) == NULL) {
 		perror("getcwd error");
 		exit(EXIT_FAILURE);
 	}
 	char *full_path = strcat(curr_path, argv[3]);
+	*/
+
 	struct stat statbuf;
-	if (stat(full_path, &statbuf) != 0 || !S_ISDIR(statbuf.st_mode)) {
+	if (stat(argv[3], &statbuf) != 0 || !S_ISDIR(statbuf.st_mode)) {
 		printf("invalid root path\n");
 		exit(EXIT_FAILURE);
 	}
