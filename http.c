@@ -7,7 +7,7 @@
 
 #define BUFFER_SIZE 256
 
-void processHttpRequest(int newsockfd) {
+void processHttpRequest(int newsockfd, char *root_path) {
     char buffer[BUFFER_SIZE];
 
     // Read characters from the connection, then process

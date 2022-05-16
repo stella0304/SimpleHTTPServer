@@ -12,6 +12,6 @@ typedef struct {
     char *file_type;
 } response_header_t;
 
-void processHttpRequest(int newsockfd);
+void processHttpRequest(int newsockfd, char *root_path);
 
 #endif

@@ -5,22 +5,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <netdb.h>
-
+#include <limits.h>
 #include "http.h"
 
+
+void check_args(int argc, char *argv[]);
+
 int main(int argc, char *argv[]) {
-    int sockfd, newsockfd, n, re, s;
+    int sockfd, newsockfd, re, s;
 	//char buffer[256];
 	struct addrinfo hints, *res;
 	struct sockaddr_storage client_addr;
 	socklen_t client_addr_size;
     
     // deal with command line arguments
-    if (argc != 4) {
-        printf("Wrong number of arguments accepted\n");
-        exit(EXIT_FAILURE);
-    }
+	check_args(argc, argv);
     char *root_path = argv[3];
 
     // Create address we're going to listen on (with given port number)
@@ -69,10 +71,39 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		processHttpRequest(newsockfd);
+		processHttpRequest(newsockfd, root_path);
 
 	}
 
 	close(sockfd);
 	return 0;
+}
+
+
+void check_args(int argc, char *argv[]) {
+	// checks if command line argumentss are valid
+	if (argc != 4) {
+        printf("Wrong number of arguments\n");
+        exit(EXIT_FAILURE);
+    } 
+
+	// check protocol
+	int ipv = atoi(argv[1]);//, port = atoi(argv[2]);
+	if (ipv != 4 && ipv != 6) {
+		printf("invalid protocol number\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	// check root path
+	char curr_path[PATH_MAX];
+	if (getcwd(curr_path, sizeof(curr_path)) == NULL) {
+		perror("getcwd error");
+		exit(EXIT_FAILURE);
+	}
+	char *full_path = strcat(curr_path, argv[3]);
+	struct stat statbuf;
+	if (stat(full_path, &statbuf) != 0 || !S_ISDIR(statbuf.st_mode)) {
+		printf("invalid root path\n");
+		exit(EXIT_FAILURE);
+	}
 }
