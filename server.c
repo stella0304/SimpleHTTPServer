@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <limits.h>
 #include "http.h"
 
 

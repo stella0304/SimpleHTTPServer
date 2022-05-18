@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/sendfile.h>
+#include <fcntl.h>
 #include "http.h"
 
 #define BUFFER_SIZE 256
@@ -202,20 +203,17 @@ static void send_200(int newsockfd, char *path) {
     send_response(newsockfd, end_response);
 
     // send file
-    FILE *fp = fopen(path, "r");
-    int fid = fileno(fp);
-    fseek(fp, 0, SEEK_END);
-    int fsize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    int file = open(path, O_RDONLY);
+    struct stat stat_buf;
+    fstat(file, &stat_buf);
 
-    int n=sendfile(newsockfd, fid, NULL, fsize);
+    int n=sendfile(newsockfd, file, NULL, stat_buf.st_size);
     if (n<0) {
         perror("sendfile");
         return;
     }
 
-    fclose(fp);
-
+    close(file);
     close(newsockfd);
 }
 
