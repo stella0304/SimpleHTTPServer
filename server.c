@@ -129,7 +129,7 @@ void check_args(int argc, char *argv[]) {
     } 
 
 	// check protocol
-	int ipv = atoi(argv[1]);//, port = atoi(argv[2]);
+	int ipv = atoi(argv[1]);
 	if (ipv != 4 && ipv != 6) {
 		printf("invalid protocol number\n");
 		exit(EXIT_FAILURE);

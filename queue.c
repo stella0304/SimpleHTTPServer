@@ -62,6 +62,7 @@ void free_queue(queue_t *q) {
 	q = NULL;
 }
 
+// prints a queue
 void print_queue(queue_t *q) {
     assert(q != NULL);
     printf("queue:");

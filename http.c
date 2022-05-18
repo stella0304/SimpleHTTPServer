@@ -29,6 +29,7 @@ static void send_404(int newsockfd);
 static void send_200(int newsockfd, char *path);
 static void get_file_type(char *path, char *type_buffer);
 static void send_response(int newsockfd, char *response);
+static void close_connection(int newsockfd);
 
 // processes one single http request and respond
 void processHttpRequest(int newsockfd, char *root_path) {
@@ -84,6 +85,10 @@ static int read_request(char *request_str, int newsockfd) {
         char_read += n;
 
         // check if we have read in the full request (reached 2 CRLF)
+        if (strlen(request_str) < 4) {
+            continue;
+        }
+
         int end_reached = 0;
         for (int i=3; request_str[i] != '\0'; i++) {
             if (request_str[i] == '\n' && request_str[i-1] == '\r' &&
@@ -132,16 +137,14 @@ static int get_path(char *request_str, char *path_buffer) {
 
 // check that the path doesn't escape out of the root folder
 static int check_valid_request_path(char *path) {
-    int valid = 0;
+    if (strlen(path) < 3) {
+        return 1;
+    }
+
     for (int i=2; path[i] != '\0'; i++) {
         if (path[i] == '/') {
             if (path[i-1] == '.' && path[i-2] == '.') {
-                valid--;
-                if (valid < 0) { // escaped out of the root folder
-                    return 0;
-                }
-            } else {
-                valid++;
+                return 0;
             }
         }
     }
@@ -175,17 +178,24 @@ static void send_response(int newsockfd, char *response) {
     }
 }
 
+// make sure connection closes
+static void close_connection(int newsockfd) {
+    int n = -1;
+    
+    while (n < 0) {
+        n = close(newsockfd);
+    }
+}
+
 // send 404 response
 static void send_404(int newsockfd) {
-    printf("invalid path received\n");
     char *response = NOT_FOUND_RESPONSE;
     send_response(newsockfd, response);
-    close(newsockfd);
+    close_connection(newsockfd);
 }
 
 // send a 200 response, the file type, and the file
 static void send_200(int newsockfd, char *path) {
-    printf("valid request received\n");
     char *response = OK_RESPONSE;
     send_response(newsockfd, response);
 
@@ -223,7 +233,7 @@ static void send_200(int newsockfd, char *path) {
     }
 
     close(file);
-    close(newsockfd);
+    close_connection(newsockfd);
 }
 
 // get the file extension if there is one
