@@ -1,5 +1,6 @@
 /* Yunzhi Li (880371) Project 2, COMP300023 */
 #define IMPLEMENTS_IPV6
+#define MULTITHREADED
 
 #define _POSIX_C_SOURCE 200112L
 #include <stdio.h>
@@ -9,10 +10,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include <limits.h>
+#include <pthread.h>
 #include "http.h"
+#include "queue.h"
 
+#define NUM_THREADS 5
 
+void *process_request(void *arg);
 void check_args(int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
@@ -66,6 +70,13 @@ int main(int argc, char *argv[]) {
 	}
 	freeaddrinfo(res);
 
+	// make worker threads and work queue
+	queue_t *request_queue = new_queue();
+	pthread_t threads[NUM_THREADS];
+	for (int i=0; i<NUM_THREADS; i++) {
+		pthread_create(&threads[i], NULL, process_request, request_queue);
+	}
+
 	// Listen on socket
 	if (listen(sockfd, 5) < 0) {
 		perror("listen");
@@ -80,17 +91,31 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		processHttpRequest(newsockfd, root_path);
+		enqueue(request_queue, newsockfd, root_path);
 
 	}
 
 	close(sockfd);
+	free(request_queue);
+
 	return 0;
 }
 
+// worker thread to process requests
+void *process_request(void *arg) {
+	queue_t *request_queue = (queue_t *) arg;
+	while (1) {
+		qnode_t *request = dequeue(request_queue);
+		if (request != NULL) {
+			processHttpRequest(request->newsockfd, request->root_path);
+			free(request);
+		}
+	}
+	return NULL;
+}
 
+// checks if command line argumentss are valid
 void check_args(int argc, char *argv[]) {
-	// checks if command line argumentss are valid
 	if (argc != 4) {
         printf("Wrong number of arguments\n");
         exit(EXIT_FAILURE);
@@ -104,17 +129,6 @@ void check_args(int argc, char *argv[]) {
 	}
 	
 	// check root path
-	
-	/*
-	char curr_path[PATH_MAX];
-	if (getcwd(curr_path, sizeof(curr_path)) == NULL) {
-		perror("getcwd error");
-		exit(EXIT_FAILURE);
-	}
-	char *full_path = strcat(curr_path, argv[3]);
-	printf("%s\n", full_path);
-	*/
-	
 	struct stat stat_buf;
 	if (stat(argv[3], &stat_buf) != 0 || !S_ISDIR(stat_buf.st_mode)) {
 		printf("invalid root path\n");
