@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/sendfile.h>
 #include "http.h"
 
 #define BUFFER_SIZE 256
@@ -75,7 +76,7 @@ static int read_request(char *request_str, int newsockfd) {
         n = read(newsockfd, buffer, BUFFER_SIZE-1); // n is number of characters read
         if (n < 0) {
             perror("read");
-            exit(EXIT_FAILURE);
+            return 0;
         }
         buffer[n] = '\0';
         strcat(request_str, buffer);
@@ -201,7 +202,19 @@ static void send_200(int newsockfd, char *path) {
     send_response(newsockfd, end_response);
 
     // send file
+    FILE *fp = fopen(path, "r");
+    int fid = fileno(fp);
+    fseek(fp, 0, SEEK_END);
+    int fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
+    int n=sendfile(newsockfd, fid, NULL, fsize);
+    if (n<0) {
+        perror("sendfile");
+        return;
+    }
+
+    fclose(fp);
 
     close(newsockfd);
 }
@@ -233,6 +246,6 @@ static void send_response(int newsockfd, char *response) {
     int n = write(newsockfd, response, (size_t) strlen(response));
     if (n < 0) {
         perror("write");
-        exit(EXIT_FAILURE);
+        return;
     }
 }
