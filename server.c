@@ -1,4 +1,5 @@
 /* Yunzhi Li (880371) Project 2, COMP300023 */
+#define IMPLEMENTS_IPV6
 
 #define _POSIX_C_SOURCE 200112L
 #include <stdio.h>
@@ -16,29 +17,37 @@ void check_args(int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
     int sockfd, newsockfd, re, s;
-	//char buffer[256];
-	struct addrinfo hints, *res;
+	struct addrinfo hints, *res, *p;
 	struct sockaddr_storage client_addr;
 	socklen_t client_addr_size;
     
     // deal with command line arguments
 	check_args(argc, argv);
+	int ipv = atoi(argv[1]);
+	char *port = argv[2];
     char *root_path = argv[3];
 
-    // Create address we're going to listen on (with given port number)
+    // Create address we're going to listen on 
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET;       // IPv4
-	hints.ai_socktype = SOCK_STREAM; // TCP
-	hints.ai_flags = AI_PASSIVE;     // for bind, listen, accept
-	// node (NULL means any interface), service (port), hints, res
-	s = getaddrinfo(NULL, argv[2], &hints, &res);
+	if (ipv == 4) {
+		hints.ai_family = AF_INET;
+	} else {
+		hints.ai_family = AF_INET6;
+	}
+	hints.ai_socktype = SOCK_STREAM; 
+	hints.ai_flags = AI_PASSIVE; 
+	s = getaddrinfo(NULL, port, &hints, &res);
 	if (s != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
 		exit(EXIT_FAILURE);
 	}
 
 	// Create socket
-	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	for (p = res; p != NULL; p = p->ai_next) {
+		if (p->ai_family == hints.ai_family) {
+			sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		}
+	}
 	if (sockfd < 0) {
 		perror("socket");
 		exit(EXIT_FAILURE);

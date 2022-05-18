@@ -166,6 +166,15 @@ static int check_valid_full_path(char *path) {
     return 1;
 }
 
+// send a string to newsockfd
+static void send_response(int newsockfd, char *response) {
+    int n = write(newsockfd, response, (size_t) strlen(response));
+    if (n < 0) {
+        perror("write");
+        return;
+    }
+}
+
 // send 404 response
 static void send_404(int newsockfd) {
     printf("invalid path received\n");
@@ -217,6 +226,7 @@ static void send_200(int newsockfd, char *path) {
     close(newsockfd);
 }
 
+// get the file extension if there is one
 static void get_file_type(char *path, char *type_buffer) {
     type_buffer[0] = '\0';
     int type_index = -1;
@@ -239,11 +249,3 @@ static void get_file_type(char *path, char *type_buffer) {
     type_buffer[j-type_index] = '\0';
 }
 
-// send a string to newsockfd
-static void send_response(int newsockfd, char *response) {
-    int n = write(newsockfd, response, (size_t) strlen(response));
-    if (n < 0) {
-        perror("write");
-        return;
-    }
-}
