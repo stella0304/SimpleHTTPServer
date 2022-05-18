@@ -14,6 +14,7 @@ struct qnode {
 typedef struct {
 	qnode_t *front;
 	qnode_t *back;
+    int keep_working;
 } queue_t;
 
 queue_t *new_queue();

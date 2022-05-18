@@ -10,6 +10,7 @@ queue_t *new_queue() {
     assert(q != NULL);
     q->front = NULL;
     q->back = NULL;
+    q->keep_working = 1;
     return q;
 }
 
