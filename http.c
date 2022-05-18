@@ -182,13 +182,13 @@ static void send_200(int newsockfd, char *path) {
     char type[MAX_TYPE_SIZE];
     get_file_type(path, type);
     char mine_type[MAX_MINE_SIZE];
-    if (strcmp(type, "jpg")) {
+    if (strcmp(type, "jpg") == 0) {
         strcpy(mine_type, "image/jpeg");
-    } else if (strcmp(type, "html")) {
+    } else if (strcmp(type, "html") == 0) {
         strcpy(mine_type, "text/html");
-    } else if (strcmp(type, "css")) {
+    } else if (strcmp(type, "css") == 0) {
         strcpy(mine_type, "text/css");
-    } else if (strcmp(type, "js")) {
+    } else if (strcmp(type, "js") == 0) {
         strcpy(mine_type, "text/javascript");
     } else {
         strcpy(mine_type, "application/octet-stream");
