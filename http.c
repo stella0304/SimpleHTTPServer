@@ -12,8 +12,11 @@
 #define BUFFER_SIZE 256
 #define MAX_REQUEST_SIZE 3000 // plenty for 2kB
 #define METHOD_SIZE 10
-#define OK_RESPONSE "HTTP/1.0 200 OK\r\n"
+#define MAX_TYPE_SIZE 10
+#define MAX_MINE_SIZE 30
+#define OK_RESPONSE "HTTP/1.0 200 OK\r\nContent-Type: "
 #define NOT_FOUND_RESPONSE "HTTP/1.0 404 Not Found\r\n\r\n"
+#define END_OF_RESPONSE "\r\n\r\n"
 
 static int read_request(char *request_str, int newsockfd);
 static int get_path(char *request_str, char *path_buffer);
@@ -21,13 +24,15 @@ static int check_valid_request_path(char *path);
 static void get_full_path(char *root_path, char *requested_path, char *full_path);
 static int check_valid_full_path(char *path);
 static void send_404(int newsockfd);
+static void send_200(int newsockfd, char *path);
+static void get_file_type(char *path, char *type_buffer);
+static void send_response(int newsockfd, char *response);
 
 // processes one single http request and respond
 void processHttpRequest(int newsockfd, char *root_path) {
 
-    char request_str[MAX_REQUEST_SIZE + 1];
-
     // read the full request
+    char request_str[MAX_REQUEST_SIZE + 1];
     if (!read_request(request_str, newsockfd)) {
         printf("invalid request received\n");
         return;
@@ -42,6 +47,7 @@ void processHttpRequest(int newsockfd, char *root_path) {
 
     if (!check_valid_request_path(path_to_file)) {
         send_404(newsockfd);
+        return;
     }
 
     // get the full path of file
@@ -51,10 +57,10 @@ void processHttpRequest(int newsockfd, char *root_path) {
     // check if what's at full path exists and is a file
     if (!check_valid_full_path(full_path)) {
         send_404(newsockfd);
+        return;
     }
 
-
-    close(newsockfd);
+    send_200(newsockfd, full_path);
 }
 
 // read the full http request
@@ -141,6 +147,7 @@ static int check_valid_request_path(char *path) {
     return 1;
 }
 
+// make full path with the root path and the requested path
 static void get_full_path(char *root_path, char *requested_path, char *full_path_buffer) {
     full_path_buffer[0] = '\0';
     strcat(full_path_buffer, root_path);
@@ -148,6 +155,7 @@ static void get_full_path(char *root_path, char *requested_path, char *full_path
 }
 
 
+// check if path exist and if the file is a regular file
 static int check_valid_full_path(char *path) {
     struct stat stat_buf;
     if (stat(path, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
@@ -156,13 +164,75 @@ static int check_valid_full_path(char *path) {
     return 1;
 }
 
+// send 404 response
 static void send_404(int newsockfd) {
     printf("invalid path received\n");
     char *response = NOT_FOUND_RESPONSE;
+    send_response(newsockfd, response);
+    close(newsockfd);
+}
+
+// send a 200 response, the file type, and the file
+static void send_200(int newsockfd, char *path) {
+    printf("valid request received\n");
+    char *response = OK_RESPONSE;
+    send_response(newsockfd, response);
+
+    // send file mime type
+    char type[MAX_TYPE_SIZE];
+    get_file_type(path, type);
+    char mine_type[MAX_MINE_SIZE];
+    if (strcmp(type, "jpg")) {
+        strcpy(mine_type, "image/jpeg");
+    } else if (strcmp(type, "html")) {
+        strcpy(mine_type, "text/html");
+    } else if (strcmp(type, "css")) {
+        strcpy(mine_type, "text/css");
+    } else if (strcmp(type, "js")) {
+        strcpy(mine_type, "text/javascript");
+    } else {
+        strcpy(mine_type, "application/octet-stream");
+    }
+    
+    send_response(newsockfd, mine_type);
+
+    // send end of response
+    char *end_response = END_OF_RESPONSE;
+    send_response(newsockfd, end_response);
+
+    // send file
+
+
+    close(newsockfd);
+}
+
+static void get_file_type(char *path, char *type_buffer) {
+    type_buffer[0] = '\0';
+    int type_index = -1;
+
+    // find the . in the path
+    for (int i = strlen(path) - 1; path[i] >= 0; i--) {
+        if (path[i] == '.') {
+            type_index = i + 1;
+            break;
+        } else if (path[i] == '/') {
+            return;
+        }
+    }
+
+    // copy over file type
+    int j;
+    for (j = type_index; path[j] != '\0'; j++) {
+        type_buffer[j-type_index] = path[j];
+    }
+    type_buffer[j-type_index] = '\0';
+}
+
+// send a string to newsockfd
+static void send_response(int newsockfd, char *response) {
     int n = write(newsockfd, response, (size_t) strlen(response));
     if (n < 0) {
         perror("write");
         exit(EXIT_FAILURE);
     }
-    close(newsockfd);
 }
