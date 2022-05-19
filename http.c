@@ -17,7 +17,7 @@
 #define MAX_TYPE_SIZE 10
 #define MAX_MINE_SIZE 30
 #define OK_RESPONSE "HTTP/1.0 200 OK\r\nContent-Type: "
-#define NOT_FOUND_RESPONSE "HTTP/1.0 404 Not Found\r\n\r\n"
+#define NOT_FOUND_RESPONSE "HTTP/1.0 404 Not Found"
 #define END_OF_RESPONSE "\r\n\r\n"
 
 static int read_request(char *request_str, int newsockfd);
@@ -29,7 +29,6 @@ static void send_404(int newsockfd);
 static void send_200(int newsockfd, char *path);
 static void get_file_type(char *path, char *type_buffer);
 static void send_response(int newsockfd, char *response);
-static void close_connection(int newsockfd);
 
 // processes one single http request and respond
 void processHttpRequest(int newsockfd, char *root_path) {
@@ -178,26 +177,15 @@ static void send_response(int newsockfd, char *response) {
     }
 }
 
-// make sure connection closes
-static void close_connection(int newsockfd) {
-    int n = -1;
-    
-    while (n < 0) {
-        n = close(newsockfd);
-    }
-}
-
 // send 404 response
 static void send_404(int newsockfd) {
-    char *response = NOT_FOUND_RESPONSE;
-    send_response(newsockfd, response);
-    close_connection(newsockfd);
+    send_response(newsockfd, NOT_FOUND_RESPONSE);
+    send_response(newsockfd, END_OF_RESPONSE);
 }
 
 // send a 200 response, the file type, and the file
 static void send_200(int newsockfd, char *path) {
-    char *response = OK_RESPONSE;
-    send_response(newsockfd, response);
+    send_response(newsockfd, OK_RESPONSE);
 
     // send file mime type
     char type[MAX_TYPE_SIZE];
@@ -233,7 +221,6 @@ static void send_200(int newsockfd, char *path) {
     }
 
     close(file);
-    close_connection(newsockfd);
 }
 
 // get the file extension if there is one
