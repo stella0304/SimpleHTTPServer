@@ -12,18 +12,21 @@
 #include <netdb.h>
 #include <pthread.h>
 #include "http.h"
-#include "queue.h"
 
 #define NUM_THREADS 5
+
+typedef struct {
+	int sockfd;
+	char *root_path;
+	int *keep_working;
+} thread_arg_t;
 
 void *process_request(void *arg);
 void check_args(int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
-    int sockfd, newsockfd, re, s;
+    int sockfd, re, s;
 	struct addrinfo hints, *res, *p;
-	struct sockaddr_storage client_addr;
-	socklen_t client_addr_size;
     
     // deal with command line arguments
 	check_args(argc, argv);
@@ -70,54 +73,50 @@ int main(int argc, char *argv[]) {
 	}
 	freeaddrinfo(res);
 
-	// make worker threads and work queue
-	queue_t *request_queue = new_queue();
-	pthread_t threads[NUM_THREADS];
-	for (int i=0; i<NUM_THREADS; i++) {
-		pthread_create(&threads[i], NULL, process_request, request_queue);
-	}
-
 	// Listen on socket
 	if (listen(sockfd, 5) < 0) {
 		perror("listen");
 		exit(EXIT_FAILURE);
 	}
 
-	while (1) {
-		client_addr_size = sizeof client_addr;
-		newsockfd = accept(sockfd, (struct sockaddr*)&client_addr, &client_addr_size);
-		if (newsockfd < 0) {
-			perror("accept");
-			exit(EXIT_FAILURE);
-		}
-
-		enqueue(request_queue, newsockfd, root_path);
+	// make worker threads
+	int keep_working = 1;
+	pthread_t threads[NUM_THREADS];
+	for (int i=0; i<NUM_THREADS; i++) {
+		thread_arg_t arg;
+		arg.keep_working = &keep_working;
+		arg.sockfd = sockfd;
+		arg.root_path = root_path;
+		pthread_create(&threads[i], NULL, process_request, &arg);
 	}
 
-	close(sockfd);
-
 	// signal threads to stop working
-	request_queue->keep_working = 0;
+	keep_working = 0;
 	for (int i=0; i<NUM_THREADS; i++) {
 		pthread_join(threads[i], NULL);
 	}
-	free(request_queue);
-	request_queue = NULL;
 
+	close(sockfd);
 	return 0;
 }
 
 // worker thread to process requests
 void *process_request(void *arg) {
-	queue_t *request_queue = (queue_t *) arg;
-	while (request_queue->keep_working) {
-		qnode_t *request = dequeue(request_queue);
-		if (request != NULL) {
-			processHttpRequest(request->newsockfd, request->root_path);
-			free(request);
-			request = NULL;
+	thread_arg_t *data = (thread_arg_t *) arg;
+	struct sockaddr_storage client_addr;
+	socklen_t client_addr_size = sizeof client_addr;
+	int newsockfd; 
+
+	while (*(data->keep_working)) {
+		newsockfd = accept(data->sockfd, (struct sockaddr*)&client_addr, &client_addr_size);
+		if (newsockfd < 0) {
+			perror("accept");
+			return NULL;
 		}
+		processHttpRequest(newsockfd, data->root_path);
+		close(newsockfd);
 	}
+
 	return NULL;
 }
 

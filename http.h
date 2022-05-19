@@ -1,6 +1,6 @@
 /* Yunzhi Li (880371) Project 2, COMP300023 */
-#ifndef RAGRAPH_H
-	#define RAGRAPH_H
+#ifndef HTTP_H
+	#define HTTP_H
 
 typedef struct {
     int response_code;

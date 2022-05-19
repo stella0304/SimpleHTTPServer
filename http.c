@@ -218,8 +218,8 @@ static void send_200(int newsockfd, char *path) {
     send_response(newsockfd, mine_type);
 
     // send end of response
-    char *end_response = END_OF_RESPONSE;
-    send_response(newsockfd, end_response);
+    //char *end_response = END_OF_RESPONSE;
+    send_response(newsockfd, END_OF_RESPONSE);
 
     // send file
     int file = open(path, O_RDONLY);
@@ -241,7 +241,7 @@ static void get_file_type(char *path, char *type_buffer) {
     type_buffer[0] = '\0';
     int type_index = -1;
 
-    // find the . in the path
+    // find the last . in the path
     for (int i = strlen(path) - 1; path[i] >= 0; i--) {
         if (path[i] == '.') {
             type_index = i + 1;
