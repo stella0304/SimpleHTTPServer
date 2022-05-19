@@ -90,8 +90,7 @@ int main(int argc, char *argv[]) {
 		pthread_create(&threads[i], NULL, process_request, &arg);
 	}
 
-	// signal threads to stop working
-	keep_working = 0;
+	// wait threads to rejoin
 	for (int i=0; i<NUM_THREADS; i++) {
 		pthread_join(threads[i], NULL);
 	}
